@@ -1,4 +1,5 @@
 // main.rs
+#![windows_subsystem = "windows"]
 mod deviceid;
 mod logger;
 mod network;
