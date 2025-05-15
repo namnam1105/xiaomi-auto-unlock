@@ -59,6 +59,10 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
+      - name: Set up MSVC environment
+        shell: cmd
+        run: '"C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64 && cargo build --release'
+
 
       - name: Build
         run: cargo build --release
