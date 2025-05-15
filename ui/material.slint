@@ -1,0 +1,549 @@
+import { M3Colors } from "theme.slint";
+import "../fonts/NotoSans-Regular.ttf";
+
+export component M3Button inherits Rectangle {
+    in property<string> text;
+    in property<length> font_size;
+    in property<color> primary;
+    in property<color> on_primary;
+    in property<color> secondary;
+    in property<color> on_secondary;
+    callback clicked;
+
+    border-radius: 20px;
+    height: 3.5rem;
+    width: 10rem;
+    background: root.primary;
+
+    animate background { duration: 200ms; }
+
+    states [
+        normal when !area.has-hover: {
+            background: root.primary;
+            label.color: root.on_primary;
+        }
+        hovered when area.has-hover: {
+            background: root.secondary;
+            label.color: root.on_secondary;
+        }
+    ]
+
+    Rectangle {
+        width: parent.width;
+        height: parent.height;
+        border-radius: parent.border-radius;
+        clip: true;
+
+        ripple := Rectangle {
+            width: ripple_radius;
+            height: ripple_radius;
+            x: ripple_center_x - self.width / 2;
+            y: ripple_center_y - self.height / 2;
+            background: M3Colors.surface;
+            border-radius: self.width / 2;
+            opacity: ripple_opacity;
+            visible: ripple_visible;
+            animate width, height, opacity { duration: 400ms; }
+        }
+    }
+
+    property<length> ripple_center_x: 0;
+    property<length> ripple_center_y: 0;
+    property<length> ripple_radius: 0px;
+    property<float> ripple_opacity: 0.0;
+    property<bool> ripple_visible: false;
+
+    timer := Timer {
+        interval: 400ms;
+        running: false;
+        triggered => {
+            ripple_opacity = 0.0;
+            reset_timer.running = true;
+        }
+    }
+
+    reset_timer := Timer {
+        interval: 100ms;
+        running: false;
+        triggered => {
+            ripple_visible = false;
+            ripple_radius = 0px;
+            ripple_center_x = 0px;
+            ripple_center_y = 0px;
+        }
+    }
+
+    label := Text {
+        text: root.text;
+        font-family: "Noto Sans, sans-serif";
+        font-size: root.font_size;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        animate color { duration: 200ms; }
+    }
+
+    area := TouchArea {
+        width: parent.width;
+        height: parent.height;
+
+        clicked => {
+            timer.running = false;
+            reset_timer.running = false;
+
+            ripple_visible = false;
+            ripple_radius = 0px;
+            ripple_opacity = 0.0;
+
+            // Сброс и запуск ripple
+            ripple_center_x = area.pressed-x;
+            ripple_center_y = area.pressed-y;
+            ripple_visible = true;
+            ripple_opacity = 0.3;
+            ripple_radius = 300px;
+
+            timer.running = true;
+            root.clicked();
+        }
+    }
+}
+
+
+
+export component M3Card inherits Rectangle {
+    in property<color> primary;
+    in property<color> on_primary;
+    background: root.primary;
+    border-radius: 12px;
+    // padding: 16px;
+}
+
+export component M3TextField {
+    // Публичные свойства
+    in-out property<string> text;
+    in property<string> placeholder: "Введите текст";
+    in property<bool> enabled: true;
+    in property<bool> has-focus: false;
+    in-out property<bool> has-error: false;
+    in property<string> error-text: "";
+    in property<string> label: "";
+    in property<bool> required: false;
+    in property<image> leading-icon;
+    in property<image> trailing-icon;
+    // in property<length> width;
+    // in property<length> height;
+    
+    // Callback для изменений текста
+    callback text-edited(string);
+    
+    // Внутренние свойства
+    private property<bool> is-focused: root.has-focus;
+    private property<bool> is-filled: text != "";
+    private property<bool> show-label-above: is-focused || is-filled;
+    private property<color> border-color: root.has-error ? 
+        M3Colors.error : root.is-focused ? 
+        M3Colors.primary : M3Colors.outline;
+    private property<color> label-color: root.has-error ? 
+        M3Colors.error : root.is-focused ? 
+        M3Colors.primary : M3Colors.on-surface-variant;
+    private property<color> text-color: root.enabled ? 
+        M3Colors.on-surface : M3Colors.on-surface.with-alpha(0.38);
+
+    // Анимация
+    states [
+        focused when root.is-focused: {
+            label-y: 8px;
+            label-font-size: 12px;
+            border-width: 2px;
+            in {
+                animate label-y { duration: 150ms; easing: ease-in-out; }
+                animate label-font-size { duration: 150ms; easing: ease-in-out; }
+                animate border-width { duration: 150ms; easing: ease-in-out; }
+            }
+        }
+        filled when root.is-filled && !root.is-focused: {
+            label-y: 13.3px;
+            label-font-size: 12px;
+            border-width: 1px;
+            in {
+                animate label-y { duration: 150ms; easing: ease-in-out; }
+                animate label-font-size { duration: 150ms; easing: ease-in-out; }
+                animate border-width { duration: 150ms; easing: ease-in-out; }
+            }
+        }
+        default: {
+            label-y: root.label != "" ? 28px : 8px;
+            label-font-size: 16px;
+            border-width: 1px;
+            in {
+                animate label-y { duration: 150ms; easing: ease-in-out; }
+                animate label-font-size { duration: 150ms; easing: ease-in-out; }
+                animate border-width { duration: 150ms; easing: ease-in-out; }
+            }
+        }
+    ]
+
+    private property<length> label-y: 28px;
+    private property<length> label-font-size: 16px;
+    private property<length> border-width: 1px;
+
+    Rectangle {
+        width: root.width;
+        height: root.height;
+        background: M3Colors.surface-container;
+        border-radius: 4px;
+        border-width: root.border-width;
+        border-color: root.border-color;
+        clip: true;
+
+        // Лейбл
+        if (root.label != "") : Text {
+            x: 46px;
+            y: root.label-y - 10px;
+            text: root.label + (root.required ? " *" : "");
+            color: root.label-color;
+            font-size: root.label-font-size;
+            font-weight: root.is-focused ? 500 : 400;
+            font-family: "Noto Sans, sans-serif";
+        }
+
+        // Поле ввода
+        TextInput {
+            x: 46px;
+            y: root.label != "" ? 24px - 5px : 8px;
+            width: root.width - 32px;
+            height: root.height - 16px;
+            font-size: 16px;
+            color: root.text-color;
+            text: root.text;
+            enabled: root.enabled;
+            font-family: "Noto Sans, sans-serif";
+            
+            accepted => {
+                root.text = self.text;
+                root.text-edited(self.text);
+                root.has-error = false;
+            }
+            edited => {
+                root.text = self.text;
+                root.text-edited(self.text);
+                root.has-error = false;
+            }
+        }
+
+        // Сообщение об ошибке
+        if (root.has-error) : Text {
+            y: 2px;
+            x: 16px;
+            text: root.error-text;
+            color: M3Colors.error;
+            font-size: 12px;
+        }
+
+        // Ведущая иконка
+        Rectangle {
+            x: 12px;
+            y: (root.height - 24px) / 2;
+            width: 24px;
+            height: 24px;
+            Image {
+                source: root.leading-icon;
+                width: 24px;
+                height: 24px;
+                image-fit: contain;
+                colorize: M3Colors.on-surface-variant;
+            }
+        }
+
+        // Хвостовая иконка
+        Rectangle {
+            x: root.width - 36px;
+            y: (root.height - 24px) / 2;
+            width: 24px;
+            height: 24px;
+            Image {
+                source: root.trailing-icon;
+                width: 24px;
+                height: 24px;
+                image-fit: contain;
+                colorize: M3Colors.on-surface-variant;
+            }
+        }
+    }
+}
+
+import { VerticalBox, ScrollView, TextEdit } from "std-widgets.slint";
+
+export component M3LogViewer inherits Window {
+    in property<image> leading-icon;
+    in property<bool> enabled: true;
+    in-out property<string> logs: "TEST";
+    private property<bool> auto-scroll: true;
+
+    Rectangle {
+        width: parent.width;
+        height: parent.height;
+        background: M3Colors.surface-container;
+        border-radius: 4px;
+        border-width: 1px;
+        border-color: M3Colors.outline;
+        clip: true;
+
+        // Иконка
+        Image {
+            source: root.leading-icon;
+            x: 12px;
+            y: 12px;
+            width: 24px;
+            height: 24px;
+            image-fit: contain;
+            colorize: M3Colors.on_surface_variant;
+        }
+
+        Text {
+            text: "Логи";
+            x: 4rem;
+            y: 11.5px;
+            font-size: 1.5rem;
+            font-family: "Noto Sans, sans-serif";
+        }
+
+        // Прокручиваемая область с логами
+        VerticalBox {
+            x: 5px;
+            y: 40px;
+            width: parent.width - 24px;
+            height: parent.height - 49px;
+            TextEdit {
+                width: parent.width - 5px;
+                wrap: word-wrap;
+                read-only: true;
+                font-size: 14px;
+                text: root.logs;
+                viewport-y: min(0px, self.visible-height - self.viewport-height);
+            }
+        }
+    }
+}
+
+export component M3Checkbox inherits Rectangle {
+    in-out property<bool> checked: false;
+    in property<string> label: "";
+    in-out property <bool> has-error;
+    in-out property <string> error-text;
+    callback toggled(bool);
+
+    height: 32px;
+    width: self.label != "" ? 160px : 32px;
+
+    TouchArea {
+        width: parent.width;
+        height: parent.height;
+
+        clicked => {
+            root.checked = !root.checked;
+            root.toggled(root.checked);
+            root.has-error = false;
+        }
+    }
+
+    // Фон
+    Rectangle {
+        x: 0px;
+        y: (parent.height - 24px) / 2;
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
+        border-width: 2px;
+        border-color: root.checked ? M3Colors.primary : M3Colors.outline;
+        background: root.checked ? M3Colors.primary : transparent;
+
+        // Галочка
+        if root.checked : Path {
+            x: 2.55px;
+            y: 2.5px;
+            width: 75%;
+            height: 75%;
+            commands: "M 2.5 6 L 5.5 9 L 10 3";
+            stroke-width: 2px;
+            stroke: M3Colors.on-primary;
+        }
+    }
+
+    // Подпись справа
+    if root.label != "" : Text {
+        x: 32px;
+        y: (parent.height - self.height) / 2;
+        text: root.label;
+        font-size: 14px;
+        color: M3Colors.on-surface;
+        font-family: "Noto Sans, sans-serif";
+    }
+
+    if root.has-error : Text {
+        x: 32px;
+        y: -5px;
+        text: error-text;
+        font-size: 14px;
+        color: M3Colors.error;
+        font-family: "Noto Sans, sans-serif";
+    }
+}
+
+export component M3ExtendedFAB inherits Rectangle {
+    in property<string> text;
+    in property<image> icon;
+    in property<length> font_size;
+    in property<color> primary;
+    in property<color> on_primary;
+    callback clicked;
+
+    height: 3.5rem;
+    border-radius: 12px;
+    background: root.primary;
+    border-bottom-right-radius: 4px;
+    // elevation := 3;
+
+    animate background { duration: 200ms; }
+    animate width {duration: 200ms; easing: ease-in-out;}
+    animate x {
+         duration: 200ms;
+         easing: ease-in-out;
+    }
+
+    states [
+        normal when !area.has-hover: {
+            background: root.primary;
+            label.color: root.on_primary;
+            width: 4rem;
+            label.color: transparent;
+            x: 48rem;
+        }
+        hovered when area.has-hover: {
+            background: root.primary.darker(10%);
+            label.color: root.on_primary;
+            width: 12rem;
+            x: 40rem;
+        }
+    ]
+
+    Rectangle {
+        width: parent.width;
+        height: parent.height;
+        border-radius: parent.border-radius;
+        clip: true;
+
+        ripple := Rectangle {
+            width: ripple_radius;
+            height: ripple_radius;
+            x: ripple_center_x - self.width / 2;
+            y: ripple_center_y - self.height / 2;
+            background: #ffffff;
+            border-radius: self.width / 2;
+            opacity: ripple_opacity;
+            visible: ripple_visible;
+            animate width, height, opacity { duration: 400ms; }
+        }
+    }
+
+    property<length> ripple_center_x: 0;
+    property<length> ripple_center_y: 0;
+    property<length> ripple_radius: 0px;
+    property<float> ripple_opacity: 0.0;
+    property<bool> ripple_visible: false;
+
+    timer := Timer {
+        interval: 400ms;
+        running: false;
+        triggered => {
+            ripple_opacity = 0.0;
+            reset_timer.running = true;
+        }
+    }
+
+    reset_timer := Timer {
+        interval: 100ms;
+        running: false;
+        triggered => {
+            ripple_visible = false;
+            ripple_radius = 0px;
+            ripple_center_x = 0px;
+            ripple_center_y = 0px;
+        }
+    }
+
+    icon_element := Image {
+        source: root.icon;
+        width: 2rem;
+        height: 2rem;
+        x: 1rem;
+        y: (parent.height - self.height) / 2;
+    }
+
+    label := Text {
+        text: root.text;
+        font-size: root.font_size;
+        color: root.on_primary;
+        font-family: "Noto Sans";
+        horizontal-alignment: left;
+        vertical-alignment: center;
+        x: icon_element.x + icon_element.width;
+        y: (parent.height - self.height) / 2;
+        animate color { duration: 200ms; }
+    }
+
+    width: label.x + label.width + 1rem;
+
+    area := TouchArea {
+        width: parent.width;
+        height: parent.height;
+
+        clicked => {
+            timer.running = false;
+            reset_timer.running = false;
+
+            ripple_visible = false;
+            ripple_radius = 0px;
+            ripple_opacity = 0.0;
+
+            ripple_center_x = area.pressed-x;
+            ripple_center_y = area.pressed-y;
+            ripple_visible = true;
+            ripple_opacity = 0.3;
+            ripple_radius = 300px;
+
+            timer.running = true;
+            root.clicked();
+        }
+    }
+}
+
+export component HyperLink inherits Text {
+    in property<string> link-text;
+    in property<string> url;
+    in property<color> link-color;
+    in property<color> hvr-color;
+    callback clicked(string);
+
+    text: root.link-text;
+
+    hl-ta := TouchArea {
+        clicked => { parent.clicked(root.url)}
+    }
+
+    animate color {
+         duration: 200ms;
+         easing: ease;
+    }
+
+    states [
+        has-hvr when hl-ta.has-hover: {
+            color: root.hvr-color;
+        }
+        not-hvr when !hl-ta.has-hover: {
+            color: root.link-color;
+        }
+    ]
+
+}

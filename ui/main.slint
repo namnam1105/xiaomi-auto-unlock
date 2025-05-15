@@ -1,0 +1,308 @@
+import { M3Button, M3Card, M3TextField, M3LogViewer, M3Checkbox, M3ExtendedFAB, HyperLink } from "material.slint";
+import { M3Colors } from "theme.slint";
+import { TabWidget } from "std-widgets.slint";
+import "../fonts/NotoSans-Regular.ttf";
+
+export component MainWindow inherits Window {
+    in-out property <string> logs;
+    in-out property <bool> ready;
+    in-out property <string> status-text;
+    in-out property <string> deviceid;
+    in-out property <string> token;
+    in-out property <bool> agreement;
+    // in-out property <bool> auto-scroll: true;
+    callback submit-request();
+    callback show-error-checkbox(string);
+    callback show-error-input(string);
+    callback show-about();
+    callback exit();
+    background: M3Colors.surface;
+    height: 60rem;
+    width: 55rem;
+
+    show-error-input(text) => {
+        token.error-text = text;
+        token.has-error = true;
+    }
+
+    show-error-checkbox(text) => {
+        agreement.has-error = true;
+        agreement.error-text = text
+    }
+
+    info := M3Card {
+        primary: M3Colors.secondary_container;
+        on-primary: M3Colors.on-secondary_container;
+        width: 95%;
+        y: 1rem;
+        height: 15rem;
+        opacity: 0.8;
+        border-color: M3Colors.outline;
+        border-width: 2.923px;
+        Text {
+            y: 10px;
+            font-size: 16.5px;
+            wrap: word-wrap;
+            width: parent.width - 10px;
+            height: parent.height;
+            vertical-alignment: top;
+            x: 6px;
+            horizontal-alignment: center;
+
+            text:   "Инструмент для автоматизированной разблокировки загрузчика Xiaomi на HyperOS 1 и выше\n"+
+                    "\n"+
+                    "script by @TheReallyPeredoZ and @n4n4m\n"+
+                    "design by @wwingsy and @n4n4m\n"+
+                    "\n"+
+                    "При обнаружении каких-либо ошибок, напишите одному из авторов.";
+        }
+    }
+
+    inputs := M3Card {
+        primary: M3Colors.secondary_container;
+        on-primary: M3Colors.on-primary_container;
+        width: 95%;
+        y: 2rem + info.height;
+        height: 14.6rem;
+        token := M3TextField {
+            label: "new_bbs_serviceToken";
+            width: 97%;
+            height: 55px;
+            leading-icon: @image-url("../img/token.svg");
+            y: 10px;
+            x: 10px;
+            text: root.token;
+            text-edited(text) => {
+                root.token = text;
+            }
+        }
+        deviceid := M3TextField {
+            label: "DeviceID (введется автоматически)";
+            width: 97%;
+            height: 55px;
+            leading-icon: @image-url("../img/deviceid.svg");
+            y: 25px + token.height;
+            x: 10px;
+            enabled: false;
+            text: root.deviceid;
+        }
+        agreement := M3Checkbox {
+            y: 30px + token.height + deviceid.height;
+            x: 10px;
+            checked: root.agreement;
+            label: "Подтверждение риска бана Mi Аккаунта, и разработчик не несет ответственность.";
+            toggled(state) => {
+                root.agreement = state;
+            }
+        }
+    }
+
+    logviewer := M3LogViewer {
+        width: 94.5%;
+        height: 36.4%;
+        x: 1.5rem;
+        logs: root.logs;
+        y: inputs.height + info.height + 3rem;
+        leading-icon: @image-url("../img/logs.svg");
+        // auto-scroll := M3Checkbox {
+        //     // y: 30px + token.height + deviceid.height;
+        //     x: 39rem;
+        //     checked: root.auto-scroll;
+        //     label: "Авто-прокрутка";
+        //     y: 0.8rem;
+        // }
+        M3ExtendedFAB {
+            text: "О программе";
+            icon: @image-url("../img/paper.svg");
+            font_size: 15px;
+            primary: M3Colors.primary;
+            on-primary: M3Colors.on-primary;
+            y: 18.5rem;
+            border-radius: 12px;
+            // secondary: M3Colors.primary_container;
+            // on_secondary: M3Colors.on_primary_container;
+            clicked => { root.show-about(); }
+        }
+    }
+
+    status := M3Card {
+        primary: ready ? M3Colors.tertiary : M3Colors.error;
+        on-primary: ready ? M3Colors.on-tertiary : M3Colors.on-error;
+        width: 12rem;
+        height: 3.5rem;
+        y: 55.5rem;
+        x: 41.5rem;
+        Text {
+            text: "Статус: " + status-text;
+            font-size: 15px;
+            color: ready ? M3Colors.on-tertiary : M3Colors.on-error;
+        }
+    }
+
+    M3Button {
+        text: "Выход";
+        x: 1.5rem;
+        y: 55.5rem;
+        font-size: 17px;
+        primary: M3Colors.error;
+        on-primary: M3Colors.on-error;
+        secondary: M3Colors.error_container;
+        on_secondary: M3Colors.on_error_container;
+        clicked => { root.exit(); }
+    }
+    
+    M3Button {
+        text: "Подать заявку";
+        x: 12.5rem;
+        y: 55.5rem;
+        width: 11rem;
+        font-size: 15px;
+        primary: M3Colors.primary;
+        on-primary: M3Colors.on-primary;
+        secondary: M3Colors.primary_container;
+        on_secondary: M3Colors.on_primary_container;
+        clicked => {
+            if (root.agreement == false) {
+                root.show-error-checkbox("Подтвердите соглашение о рисках!");
+                return;
+            }
+            if (root.token.is-empty) {
+                root.show-error-input("Введите serviceToken!");
+                return;
+            }
+            root.submit-request();
+        }
+    }
+}
+
+export component AboutPage inherits Window {
+    callback hyperlink(string);
+    background: M3Colors.surface;
+    
+    width: 500px; height: 600px;
+    Text {
+        y: 5pt;
+        font-family: "Noto Sans";
+        font-size: 16pt;
+        color: M3Colors.on_surface;
+        text: "Mi Community Auto Unlock v4";
+    }
+    desc := M3Card {
+        y: 45px; width: 95%; height: 80px;
+        background: M3Colors.surface_container;
+        Text {
+            y: 5pt;
+            font-family: "Noto Sans";
+            font-size: 12pt;
+            color: M3Colors.on_surface;
+            wrap: word-wrap;
+            horizontal-alignment: left;
+            x: 10pt;
+            text: "Инструмент для автоматической отправки\nзаявки на разблокировку загрузчика\nустройств Xiaomi/HyperOS";
+        }
+    }
+    authors := M3Card {
+        y: desc.height + 45px + 10px;
+        background: M3Colors.surface_container_high;
+        width: 95%; height: 105px;
+        Text {
+            y: 0pt;
+            // x: 10pt;
+            text: "Авторы";
+            font-family: "Noto Sans";
+            font-size: 15.6pt;
+        }
+        Text {
+            y: 20pt;
+            text: "@n4n4m - Разработчик, UI дизайнер, автор реврайта на Rust\n"+
+                  "@wwingsy - Помощь в дизайне и идеях\n"+
+                  "@TheReallyPeredoZ - Главный оригинальный разработчик";
+            font-size: 9.5pt;
+        }
+        HyperLink {
+            link-text: "@MiCommunityUnlock";
+            link-color: M3Colors.primary;
+            hvr-color: M3Colors.on_primary_container;
+            url: "https://t.me/MiCommunityUnlock";
+            clicked(url) => {hyperlink(url)}
+            x: 37.5pt;
+            y: 58pt;
+        }
+        Text {
+            text: "- Телеграм канал";
+            y: 58pt;
+            x: 137.5pt;
+        }
+    }
+    guide := M3Card {
+        y: authors.height + desc.height + 45px + 20px; width: 95%; height: 160px;
+        background: M3Colors.surface_container;
+        Text {
+            text: "Общие положения для разблокировки";
+            y: 3pt;
+            font-family: "Noto Sans";
+            font-size: 16pt;
+        }
+        Text {
+            text: "1. Mi аккаунт старше 30 дней\n"+
+                  "2. Третий левел в Mi Community\n"+
+                  "3. Mi Community аккаунт должен быть с регионом Global\n"+
+                  "4. Разблокировка устройств со всеми индексами кроме\n китайских\n"+
+                  "5. Устройство должно быть на HyperOS";
+            font-size: 11pt;
+            y: 25pt;
+            x: 10pt;
+        }
+    }
+    instructions := M3Card {
+        y: authors.height + desc.height + guide.height + 45px + 30px; width: 95%; height: 165px;
+        background: M3Colors.surface_container_high;
+        Text {
+            wrap: char-wrap;
+            text: "1. Скачайте расширение Cookie Editor\n"+
+                  "2. Авторизуйтесь в аккаунте, предварительно выйдя из него, \nна сайте Mi Community";
+            x: 10pt;
+            y: 10pt;
+            font-size: 11pt;
+        }
+        HyperLink {
+            link-text: "http://new.c.mi.com/global";
+            y: 42pt;
+            x: 137.5pt;
+            link-color: M3Colors.primary;
+            hvr-color: M3Colors.on_primary_container;
+            url: "http://new.c.mi.com/global";
+            clicked(url) => {
+                hyperlink(url)
+            }
+        }
+        Text {
+            wrap: char-wrap;
+            text: "или";    
+            x: 255pt;
+            y: 40pt;
+            font-size: 11pt;
+        }
+        HyperLink {
+            text: "http://mi.com";
+            link-color: M3Colors.primary;
+            hvr-color: M3Colors.on_primary_container;
+            url: "http://mi.com";
+            clicked(url) => {
+                hyperlink(url)
+            }
+            y: 42pt;
+            x: 279pt;
+            
+        }
+        Text {
+            wrap: char-wrap;
+            text: "3. В окне Cookie Editor извлеките new_bbs_token и скопируйте\n его\n"+
+                  "4. Вставьте new_bbs_token, нажмите подать заявку\n и ждите.";
+            x: 10pt;
+            y: 56pt;
+            font-size: 11pt;
+        }
+    }
+}
+
