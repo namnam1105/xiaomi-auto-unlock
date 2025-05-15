@@ -45,7 +45,7 @@ jobs:
           path: target/release/micommunity
 
   build-windows:
-    runs-on: windows-2019
+    runs-on: windows-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -61,8 +61,7 @@ jobs:
 
       - name: Set up MSVC environment
         shell: cmd
-        run: '"C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64 && cargo build --release'
-
+        run: '"C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64'
 
       - name: Build
         run: cargo build --release
