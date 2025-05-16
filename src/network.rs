@@ -227,7 +227,6 @@ pub async fn check_unlock_status(
             }
         }
         let data = data.get(&Value::String("data".to_string())).unwrap();
-        println!("{:?}", data);
         let is_pass = data.get("is_pass").unwrap();
         let button_state = data.get("button_state");
         let deadline_format = data.get("deadline_format");
