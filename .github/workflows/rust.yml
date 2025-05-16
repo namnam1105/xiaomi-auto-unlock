@@ -1,0 +1,120 @@
+name: Rust CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - uses: actions/checkout@v3
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libssl-dev libfontconfig1-dev libfreetype6-dev
+
+
+      - name: Build
+        run: cargo build --release
+
+      - name: Run tests
+        run: cargo test --release
+
+      - name: Upload binary as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: micommunity-linux
+          path: target/release/micommunity
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build
+        run: cargo build --release
+
+      - name: Run tests
+        run: cargo test --release
+
+      - name: Upload binary as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: micommunity-windows
+          path: target/release/micommunity.exe
+
+  release:
+    needs: [build-linux, build-windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # необходимо для gh release
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # нужно для получения всех тегов
+
+      - name: Download Linux binary
+        uses: actions/download-artifact@v4
+        with:
+          name: micommunity-linux
+          path: artifacts/
+
+      - name: Download Windows binary
+        uses: actions/download-artifact@v4
+        with:
+          name: micommunity-windows
+          path: artifacts/
+
+      - name: Get next version tag
+        id: tag
+        run: |
+          # Получаем последний тег, сортируя по версии
+          latest=$(git tag | grep '^v' | sort -V | tail -n 1)
+
+          if [ -z "$latest" ]; then
+            next="v1.0.0"
+          else
+            # Извлекаем X, Y, Z
+            IFS='.' read -r major minor patch <<<"${latest#v}"
+            patch=$((patch + 1))
+            next="v$major.$minor.$patch"
+          fi
+
+          echo "next_tag=$next" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ steps.tag.outputs.next_tag }}" \
+            artifacts/micommunity artifacts/micommunity.exe \
+            --title "Release ${{ steps.tag.outputs.next_tag }}" \
+            --notes "Automated build for Linux and Windows"
