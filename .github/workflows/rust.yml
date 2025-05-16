@@ -110,11 +110,17 @@ jobs:
 
           echo "next_tag=$next" >> "$GITHUB_OUTPUT"
 
+      - name: Rename artifacts
+        run: |
+          mv artifacts/micommunity artifacts/micommunity-x86_64-linux
+          mv artifacts/micommunity.exe artifacts/micommunity-x86_64-windows.exe
+
+
       - name: Create GitHub Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release create "${{ steps.tag.outputs.next_tag }}" \
-            artifacts/micommunity artifacts/micommunity.exe \
+            artifacts/micommunity-x86_64-linux artifacts/micommunity-x86_64-windows.exe \
             --title "Release ${{ steps.tag.outputs.next_tag }}" \
-            --notes "Automated build for Linux and Windows"
+            --notes "Автоматическая сборка под Windows и Linux."
