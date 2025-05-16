@@ -138,7 +138,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let about_weak = about.as_weak(); // Создаем слабую ссылку
     let about_clone = about_weak.clone();
 
+    
+
     about.show()?;
+
+    update_status(false, "Не запущено");
 
     slint::invoke_from_event_loop({
         let about = about_weak.clone();
@@ -157,9 +161,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
     });
 
-    window.on_submit_request(move || {
+    window.on_submit_request(move |cookie| {
         if let Some(window) = weak_window.upgrade() {
-            let cookie_value = window.get_token();
+            let cookie_value = cookie.to_string().trim().to_string();
             let device_id = deviceid::generate_device_id();
 
             window.set_deviceid(device_id.clone().into());

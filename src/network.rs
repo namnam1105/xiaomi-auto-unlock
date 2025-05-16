@@ -4,7 +4,6 @@ use std::{
     collections::HashMap,
     f64,
     net::{ToSocketAddrs, UdpSocket},
-    str::FromStr,
     time::Duration,
 };
 
@@ -201,15 +200,18 @@ pub async fn check_unlock_status(
     let url = "https://sgp-api.buy.mi.com/bbs/api/global/user/bl-switch/state";
 
     let mut headers: HeaderMap = HeaderMap::new();
-    let header = HeaderValue::from_str(format!("new_bbs_serviceToken={cookie_value};versionCode=500411;versionName=5.4.11;deviceId={device_id};").as_str());
-    headers.append("Cookie", header.unwrap());
+    let header = HeaderValue::from_str(format!("new_bbs_serviceToken={cookie_value};versionCode=500411;versionName=5.4.11;deviceId={device_id};").as_str()).unwrap();
+    headers.append("Cookie", header);
+    let content_header = HeaderValue::from_str("application/json; charset=utf-8").unwrap();
+    headers.append("Content-Type", content_header);
 
     let response = session.get(url).headers(headers).send().await;
     if let Ok(response) = response {
         log("Ответ получен...");
         let data = response.json::<HashMap<Value, Value>>().await.unwrap();
         // let data: HashMap<String,String> = data.get("data").unwrap();
-        match data.get(&Value::String("code".to_string())) {
+        // println!("{:?}", data);
+        match data.get(&Value::String("code".into())) {
             Some(code) => {
                 // log(code);
                 if code.as_u64().unwrap() == 100004u64 {
@@ -218,61 +220,58 @@ pub async fn check_unlock_status(
                     return false;
                 }
             }
-            _ => {
+            None => {
                 log("Ошибка проверки статуса.");
                 update_status(false, "Ошибка");
                 return false;
             }
         }
-        // let data_t = data.get(&Value::String("data".to_string()));
-        let is_pass = data.get(&Value::String("is_pass".to_string()));
-        let button_state = data.get(&Value::String("button_state".to_string()));
-        let deadline_format = data.get(&Value::String("deadline_format".to_string()));
+        let data = data.get(&Value::String("data".to_string())).unwrap();
+        println!("{:?}", data);
+        let is_pass = data.get("is_pass").unwrap();
+        let button_state = data.get("button_state");
+        let deadline_format = data.get("deadline_format");
 
-        match is_pass {
-            Some(is_pass) => {
-                let button_state = button_state.unwrap();
-                if is_pass == &Value::Number(Number::from(4)) {
-                    if button_state == &Value::Number(Number::from(1)) {
-                        log("[Статус] Аккаунт может подать заявку на разблокировку.");
-                        update_status(true, "Можно разблокировать");
-                        return true;
-                    } else if button_state == &Value::Number(Number::from(2)) {
-                        log(format!(
-                            "[Статус] На аккаунте блокировка на подачу заявки до {} (Месяц/День).",
-                            deadline_format.unwrap()
-                        ));
-                        update_status(false, "Заблокировано");
-                        return false;
-                    } else if button_state == &Value::Number(Number::from(3)) {
-                        log("[Статус] Аккаунт создан менее 30 дней назад.");
-                        update_status(false, "Менее 30 дней");
-                        return false;
-                    } else if is_pass == &Value::Number(Number::from(1)) {
-                        log(format!(
-                            "[Статус] Заявка одобрена, разблокировка возможна до {}.",
-                            deadline_format.unwrap()
-                        ));
-                        update_status(true, "Одобрено");
-                        return true;
-                    } else {
-                        log("[Статус] Ошибка получения статуса разблокировки.");
-                        update_status(false, "Ошибка");
-                        return false;
-                    }
+            let button_state = button_state.unwrap();
+            if is_pass == &Value::Number(Number::from(4)) {
+                if button_state == &Value::Number(Number::from(1)) {
+                    log("[Статус] Аккаунт может подать заявку на разблокировку.");
+                    update_status(true, "Можно разблокировать");
+                    return true;
+                } else if button_state == &Value::Number(Number::from(2)) {
+                    log(format!(
+                        "[Статус] На аккаунте блокировка на подачу заявки до {} (Месяц/День).",
+                        deadline_format.unwrap()
+                    ));
+                    update_status(false, "Заблокировано");
+                    return false;
+                } else if button_state == &Value::Number(Number::from(3)) {
+                    log("[Статус] Аккаунт создан менее 30 дней назад.");
+                    update_status(false, "Менее 30 дней");
+                    return false;
+                } else if is_pass == &Value::Number(Number::from(1)) {
+                    log(format!(
+                        "[Статус] Заявка одобрена, разблокировка возможна до {}.",
+                        deadline_format.unwrap()
+                    ));
+                    update_status(true, "Одобрено");
+                    return true;
+
                 } else {
-                    log("Ошибка получения ответа.");
+                    log("[Статус] Ошибка получения статуса разблокировки.");
                     update_status(false, "Ошибка");
                     return false;
                 }
-            }
-            _ => {
-                log("Ошибка получения статуса разблокировки.");
+            } else if is_pass == &Value::Number(Number::from(1)) {
+                log(format!("[Статус] Заявка одобрена, разблокировка возможна до {}.",deadline_format.unwrap()));
+                update_status(true, "Одобрено");
+                return true;
+            } else {
+                log("Ошибка получения ответа.");
                 update_status(false, "Ошибка");
                 return false;
             }
-        }
-    } else {
+        } else {
         log("Ошибка получения ответа.");
         update_status(false, "Ошибка");
         return false;

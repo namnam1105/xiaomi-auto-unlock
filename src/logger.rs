@@ -38,28 +38,19 @@ pub fn log<T: std::fmt::Display>(message: T) {
     }
 }
 
-pub fn update_status(ready: bool, message: &str) {
-    if let Some(window_lock) = WINDOW.get() {
-        if let Ok(window_ref) = window_lock.lock() {
-            if let Some(window_weak) = &*window_ref {
-                if let Some(window) = window_weak.upgrade() {
-                    window.set_status_text(message.into());
-                    window.set_ready(ready);
-                }
-            }
-        }
-    }
+pub fn update_status(_ready: bool, _message: &str) {
+// заглушка
 }
 
 // Clear logs
-pub fn clear() {
-    if let Some(window_lock) = WINDOW.get() {
-        if let Ok(window_ref) = window_lock.lock() {
-            if let Some(window_weak) = &*window_ref {
-                if let Some(window) = window_weak.upgrade() {
-                    window.set_logs("".into());
-                }
-            }
-        }
-    }
-}
+// pub fn clear() {
+//     if let Some(window_lock) = WINDOW.get() {
+//         if let Ok(window_ref) = window_lock.lock() {
+//             if let Some(window_weak) = &*window_ref {
+//                 if let Some(window) = window_weak.upgrade() {
+//                     window.set_logs("".into());
+//                 }
+//             }
+//         }
+//     }
+// }

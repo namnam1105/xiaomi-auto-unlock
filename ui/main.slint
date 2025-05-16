@@ -11,10 +11,11 @@ export component MainWindow inherits Window {
     in-out property <string> token;
     in-out property <bool> agreement;
     // in-out property <bool> auto-scroll: true;
-    callback submit-request();
+    callback submit-request(string);
     callback show-error-checkbox(string);
     callback show-error-input(string);
     callback show-about();
+    callback update-status(bool,string);
     callback exit();
     background: M3Colors.surface;
     height: 60rem;
@@ -125,19 +126,19 @@ export component MainWindow inherits Window {
         }
     }
 
-    status := M3Card {
-        primary: ready ? M3Colors.tertiary : M3Colors.error;
-        on-primary: ready ? M3Colors.on-tertiary : M3Colors.on-error;
-        width: 12rem;
-        height: 3.5rem;
-        y: 55.5rem;
-        x: 41.5rem;
-        Text {
-            text: "Статус: " + status-text;
-            font-size: 15px;
-            color: ready ? M3Colors.on-tertiary : M3Colors.on-error;
-        }
-    }
+    // status := M3Card {
+    //     primary: root.ready ? M3Colors.tertiary : M3Colors.error;
+    //     on-primary: root.ready ? M3Colors.on-tertiary : M3Colors.on-error;
+    //     width: 12rem;
+    //     height: 3.5rem;
+    //     y: 55.5rem;
+    //     x: 41.5rem;
+    //     Text {
+    //         text: "Статус: " + root.status-text;
+    //         font-size: 15px;
+    //         color: root.ready ? M3Colors.on-tertiary : M3Colors.on-error;
+    //     }
+    // }
 
     M3Button {
         text: "Выход";
@@ -170,7 +171,7 @@ export component MainWindow inherits Window {
                 root.show-error-input("Введите serviceToken!");
                 return;
             }
-            root.submit-request();
+            root.submit-request(token.text);
         }
     }
 }
